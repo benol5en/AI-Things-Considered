@@ -18,15 +18,9 @@ Vintage comic panel illustration. Muted earth tone palette - cream, warm brown, 
 
 ### People
 
-**With reference image available:**
-- Use provided `features` description (e.g., "man with distinctive swept-back blonde hair, heavy brow")
-- Place person in scene naturally - NOT a copy-pasted portrait
-- Show them in action, from angles, interacting with environment
-- Features ensure likeness; reference image guides Gemini
-
-**Without reference image:**
 - Use: silhouettes, figures from behind, distant figures, hands only, shadows
 - Represent through symbols/context rather than attempting likeness
+- Focus on environment and situation over facial features
 
 ### Concepts → Objects
 - Justice → scales, gavel, courthouse columns
@@ -70,20 +64,7 @@ Return ONLY the image prompt. No explanation, no preamble.
 Vintage comic panel illustration. Muted earth tone palette - cream, warm brown, dusty blue, sage green. Flat geometric shapes with clean precise linework. Diagrammatic, nostalgic mid-century newspaper illustration aesthetic. A single empty city bus parked askew in front of an ornate presidential palace, long dramatic shadow stretching across an empty tropical plaza, palm trees framing the scene, bird's eye view looking down at the abandoned vehicle, melancholic late afternoon golden light. A torn poster on a nearby wall shows partial text "MADURO".
 ```
 
-### Example 2 (with reference image)
-
-**Input:**
-- Title: "Tim Walz steps out of 2026 governor race"
-- Description: "Minnesota Democratic Gov. Tim Walz has decided to step out of the 2026 race for governor. He's clashed with Trump and been dogged by reports of fraud in state-run social services programs."
-- Reference: `walz.jpg`
-- Features: "balding man with short gray beard, glasses, friendly midwestern appearance"
-
-**Output:**
-```
-Vintage comic panel illustration. Muted earth tone palette - cream, warm brown, dusty blue, sage green. Flat geometric shapes with clean precise linework. Diagrammatic, nostalgic mid-century newspaper illustration aesthetic. A balding man with short gray beard and glasses walking away down a long empty corridor of a state capitol building, three-quarter view showing his profile, dramatic perspective with marble columns receding into distance, winter light through tall windows casting geometric shadows on the floor, his posture slightly slumped, medium-wide shot. Small "EXIT" sign glowing above a door at the end of the hall.
-```
-
-### Example 3
+### Example 2
 
 **Input:**
 - Title: "Health officials slash vaccine recommendations"
@@ -94,7 +75,7 @@ Vintage comic panel illustration. Muted earth tone palette - cream, warm brown, 
 Vintage comic panel illustration. Muted earth tone palette - cream, warm brown, dusty blue, sage green. Flat geometric shapes with clean precise linework. Diagrammatic, nostalgic mid-century newspaper illustration aesthetic. A doctor's office wall with a childhood vaccination chart, several items crossed out with bold red X marks, a stethoscope hanging nearby, morning light from a window illuminating floating dust particles, straight-on documentary view. The chart header reads "VACCINES".
 ```
 
-### Example 4
+### Example 3
 
 **Input:**
 - Title: "Israel hopes Maduro arrest pressures Iran"

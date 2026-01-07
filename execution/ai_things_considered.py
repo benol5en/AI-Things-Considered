@@ -22,7 +22,7 @@ load_dotenv()
 
 # Configuration
 RSS_FEED = "https://feeds.npr.org/2/rss.xml"
-OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", Path(__file__).parent.parent.parent / "benolsen.com" / "comics" / "ai-things-considered"))
+OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", Path(__file__).parent.parent / "output"))
 TEMP_DIR = Path(__file__).parent.parent / ".tmp"
 NUM_PANELS = 6
 
@@ -224,7 +224,7 @@ def compose_comic_strip(panels, date_str):
 
 
 def save_metadata(stories, date_str):
-    """Save metadata JSON for the comic."""
+    """Save metadata JSON for the comic and update latest.json."""
     metadata = {
         "date": date_str,
         "image": f"{date_str}.png",
@@ -239,12 +239,35 @@ def save_metadata(stories, date_str):
         ]
     }
 
+    # Save dated metadata file
     metadata_path = OUTPUT_DIR / f"{date_str}.json"
     with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2)
-
     print(f"Metadata saved to: {metadata_path}")
+
+    # Update latest.json to point to current comic
+    latest_path = OUTPUT_DIR / "latest.json"
+    with open(latest_path, "w") as f:
+        json.dump(metadata, f, indent=2)
+    print(f"Latest pointer updated: {latest_path}")
+
     return metadata
+
+
+def update_latest_images():
+    """Copy the 2 most recent comics to latest-1.png and latest-2.png."""
+    import shutil
+
+    # Find all comic images, sorted by date descending
+    comics = sorted(OUTPUT_DIR.glob("????-??-??.png"), reverse=True)
+
+    if len(comics) >= 1:
+        shutil.copy(comics[0], OUTPUT_DIR / "latest-1.png")
+        print(f"Copied {comics[0].name} → latest-1.png")
+
+    if len(comics) >= 2:
+        shutil.copy(comics[1], OUTPUT_DIR / "latest-2.png")
+        print(f"Copied {comics[1].name} → latest-2.png")
 
 
 def main():
@@ -295,11 +318,17 @@ def main():
     # Step 6: Save metadata
     metadata = save_metadata(selected_stories, today)
 
+    # Step 7: Update latest-1.png and latest-2.png
+    update_latest_images()
+
     print(f"\n{'='*60}")
     print("COMPLETE!")
     print(f"Files ready to commit:")
     print(f"  - comics/ai-things-considered/{today}.png")
     print(f"  - comics/ai-things-considered/{today}.json")
+    print(f"  - comics/ai-things-considered/latest.json")
+    print(f"  - comics/ai-things-considered/latest-1.png")
+    print(f"  - comics/ai-things-considered/latest-2.png")
     print(f"{'='*60}\n")
 
     return metadata
