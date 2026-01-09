@@ -22,9 +22,14 @@ load_dotenv()
 
 # Configuration
 RSS_FEED = "https://feeds.npr.org/2/rss.xml"
-OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", Path(__file__).parent.parent / "output"))
+WEB_OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", Path(__file__).parent.parent / "output"))
+FULLRES_DIR = Path(__file__).parent.parent / "output"  # Local archive, gitignored
 TEMP_DIR = Path(__file__).parent.parent / ".tmp"
 NUM_PANELS = 6
+
+# Web optimization settings
+WEB_MAX_WIDTH = 1000
+WEB_QUALITY = 85
 
 # Style constants
 STYLE_PREFIX = """Vintage comic panel illustration. Muted earth tone palette - cream, warm brown, dusty blue, sage green, faded ochre. Flat geometric shapes with clean precise linework. Diagrammatic, nostalgic mid-century newspaper illustration aesthetic. Hand-drawn feel with architectural precision."""
@@ -153,6 +158,15 @@ def generate_panel_image(prompt, panel_num):
     return None
 
 
+def optimize_for_web(image, max_width=WEB_MAX_WIDTH, quality=WEB_QUALITY):
+    """Resize and compress image for web delivery."""
+    if image.width > max_width:
+        ratio = max_width / image.width
+        new_size = (max_width, int(image.height * ratio))
+        image = image.resize(new_size, Image.Resampling.LANCZOS)
+    return image.convert('RGB')
+
+
 def compose_comic_strip(panels, date_str):
     """Compose 6 panels into a final comic strip with title and date."""
     print("Composing final comic strip...")
@@ -227,7 +241,7 @@ def save_metadata(stories, date_str):
     """Save metadata JSON for the comic and update latest.json."""
     metadata = {
         "date": date_str,
-        "image": f"{date_str}.png",
+        "image": f"{date_str}.jpg",
         "stories": [
             {
                 "panel": i + 1,
@@ -240,13 +254,13 @@ def save_metadata(stories, date_str):
     }
 
     # Save dated metadata file
-    metadata_path = OUTPUT_DIR / f"{date_str}.json"
+    metadata_path = WEB_OUTPUT_DIR / f"{date_str}.json"
     with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2)
     print(f"Metadata saved to: {metadata_path}")
 
     # Update latest.json to point to current comic
-    latest_path = OUTPUT_DIR / "latest.json"
+    latest_path = WEB_OUTPUT_DIR / "latest.json"
     with open(latest_path, "w") as f:
         json.dump(metadata, f, indent=2)
     print(f"Latest pointer updated: {latest_path}")
@@ -255,24 +269,25 @@ def save_metadata(stories, date_str):
 
 
 def update_latest_images():
-    """Copy the 2 most recent comics to latest-1.png and latest-2.png."""
+    """Copy the 2 most recent comics to latest-1.jpg and latest-2.jpg."""
     import shutil
 
     # Find all comic images, sorted by date descending
-    comics = sorted(OUTPUT_DIR.glob("????-??-??.png"), reverse=True)
+    comics = sorted(WEB_OUTPUT_DIR.glob("????-??-??.jpg"), reverse=True)
 
     if len(comics) >= 1:
-        shutil.copy(comics[0], OUTPUT_DIR / "latest-1.png")
-        print(f"Copied {comics[0].name} → latest-1.png")
+        shutil.copy(comics[0], WEB_OUTPUT_DIR / "latest-1.jpg")
+        print(f"Copied {comics[0].name} → latest-1.jpg")
 
     if len(comics) >= 2:
-        shutil.copy(comics[1], OUTPUT_DIR / "latest-2.png")
-        print(f"Copied {comics[1].name} → latest-2.png")
+        shutil.copy(comics[1], WEB_OUTPUT_DIR / "latest-2.jpg")
+        print(f"Copied {comics[1].name} → latest-2.jpg")
 
 
 def main():
     """Run the full pipeline."""
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    WEB_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    FULLRES_DIR.mkdir(parents=True, exist_ok=True)
     TEMP_DIR.mkdir(exist_ok=True)
 
     today = datetime.now().strftime("%Y-%m-%d")
@@ -311,9 +326,17 @@ def main():
 
     # Step 5: Compose final strip
     strip = compose_comic_strip(panels, today_display)
-    strip_path = OUTPUT_DIR / f"{today}.png"
-    strip.save(strip_path)
-    print(f"Comic saved to: {strip_path}")
+
+    # Save full-res PNG locally (gitignored)
+    fullres_path = FULLRES_DIR / f"{today}.png"
+    strip.save(fullres_path)
+    print(f"Full-res saved to: {fullres_path}")
+
+    # Save web-optimized JPG to website
+    web_strip = optimize_for_web(strip)
+    web_path = WEB_OUTPUT_DIR / f"{today}.jpg"
+    web_strip.save(web_path, "JPEG", quality=WEB_QUALITY, optimize=True)
+    print(f"Web version saved to: {web_path}")
 
     # Step 6: Save metadata
     metadata = save_metadata(selected_stories, today)
@@ -323,12 +346,13 @@ def main():
 
     print(f"\n{'='*60}")
     print("COMPLETE!")
+    print(f"Full-res archived: output/{today}.png")
     print(f"Files ready to commit:")
-    print(f"  - comics/ai-things-considered/{today}.png")
+    print(f"  - comics/ai-things-considered/{today}.jpg")
     print(f"  - comics/ai-things-considered/{today}.json")
     print(f"  - comics/ai-things-considered/latest.json")
-    print(f"  - comics/ai-things-considered/latest-1.png")
-    print(f"  - comics/ai-things-considered/latest-2.png")
+    print(f"  - comics/ai-things-considered/latest-1.jpg")
+    print(f"  - comics/ai-things-considered/latest-2.jpg")
     print(f"{'='*60}\n")
 
     return metadata
