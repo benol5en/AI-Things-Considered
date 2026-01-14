@@ -284,6 +284,32 @@ def update_latest_images():
         print(f"Copied {comics[1].name} → latest-2.jpg")
 
 
+def update_archive(date_str):
+    """Update archive.json with the new comic entry."""
+    archive_path = WEB_OUTPUT_DIR / "archive.json"
+
+    # Load existing archive or create new one
+    if archive_path.exists():
+        with open(archive_path, "r") as f:
+            archive = json.load(f)
+    else:
+        archive = {"comics": []}
+
+    new_entry = {"date": date_str, "image": f"{date_str}.jpg"}
+
+    # Check if entry already exists (avoid duplicates on re-runs)
+    existing_dates = [c["date"] for c in archive["comics"]]
+    if date_str not in existing_dates:
+        # Insert at beginning (newest first)
+        archive["comics"].insert(0, new_entry)
+
+        with open(archive_path, "w") as f:
+            json.dump(archive, f, indent=2)
+        print(f"Archive updated: {archive_path}")
+    else:
+        print(f"Archive already contains {date_str}, skipping")
+
+
 def main():
     """Run the full pipeline."""
     WEB_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -344,6 +370,9 @@ def main():
     # Step 7: Update latest-1.png and latest-2.png
     update_latest_images()
 
+    # Step 8: Update archive.json
+    update_archive(today)
+
     print(f"\n{'='*60}")
     print("COMPLETE!")
     print(f"Full-res archived: output/{today}.png")
@@ -353,6 +382,7 @@ def main():
     print(f"  - comics/ai-things-considered/latest.json")
     print(f"  - comics/ai-things-considered/latest-1.jpg")
     print(f"  - comics/ai-things-considered/latest-2.jpg")
+    print(f"  - comics/ai-things-considered/archive.json")
     print(f"{'='*60}\n")
 
     return metadata
