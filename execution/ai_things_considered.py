@@ -8,6 +8,7 @@ and composes them into a daily strip.
 
 import os
 import json
+import time
 import feedparser
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +17,10 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from PIL import Image, ImageDraw, ImageFont
+
+# Retry configuration
+MAX_RETRIES = 3
+RETRY_BASE_DELAY = 2  # seconds
 
 # Load environment
 load_dotenv()
@@ -26,6 +31,7 @@ WEB_OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", Path(__file__).parent.parent / "ou
 FULLRES_DIR = Path(__file__).parent.parent / "output"  # Local archive, gitignored
 TEMP_DIR = Path(__file__).parent.parent / ".tmp"
 NUM_PANELS = 6
+MIN_PANELS_REQUIRED = 4  # Fail if fewer than this many panels succeed
 
 # Web optimization settings
 WEB_MAX_WIDTH = 1000
@@ -136,24 +142,44 @@ Return ONLY the image prompt, no explanation. Start with the style, then the sce
 
 
 def generate_panel_image(prompt, panel_num):
-    """Generate a single comic panel image using Gemini 3 Pro."""
-    print(f"  Generating panel {panel_num}...")
+    """Generate a single comic panel image using Gemini 3 Pro with retries."""
 
-    response = client.models.generate_content(
-        model="gemini-3-pro-image-preview",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_modalities=["TEXT", "IMAGE"],
-            image_config=types.ImageConfig(
-                aspect_ratio="2:3",
-                image_size="1K"
-            ),
-        ),
-    )
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            print(f"  Generating panel {panel_num}..." + (f" (attempt {attempt})" if attempt > 1 else ""))
 
-    for part in response.candidates[0].content.parts:
-        if part.inline_data:
-            return Image.open(BytesIO(part.inline_data.data))
+            response = client.models.generate_content(
+                model="gemini-3-pro-image-preview",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=["TEXT", "IMAGE"],
+                    image_config=types.ImageConfig(
+                        aspect_ratio="2:3",
+                        image_size="1K"
+                    ),
+                ),
+            )
+
+            # Check for valid response
+            if not response.candidates:
+                raise ValueError("No candidates in response")
+
+            for part in response.candidates[0].content.parts:
+                if part.inline_data:
+                    print(f"    ✓ Panel {panel_num} generated successfully")
+                    return Image.open(BytesIO(part.inline_data.data))
+
+            raise ValueError("No image data in response")
+
+        except Exception as e:
+            print(f"    ✗ Panel {panel_num} failed: {type(e).__name__}: {e}")
+
+            if attempt < MAX_RETRIES:
+                delay = RETRY_BASE_DELAY * (2 ** (attempt - 1))  # Exponential backoff
+                print(f"    Retrying in {delay}s...")
+                time.sleep(delay)
+            else:
+                print(f"    ✗ Panel {panel_num} failed after {MAX_RETRIES} attempts")
 
     return None
 
@@ -349,6 +375,16 @@ def main():
         if panel:
             panel_path = TEMP_DIR / f"panel_{i+1}.png"
             panel.save(panel_path)
+
+    # Check panel success rate
+    successful_panels = sum(1 for p in panels if p is not None)
+    print(f"\nPanel generation: {successful_panels}/{NUM_PANELS} succeeded")
+
+    if successful_panels < MIN_PANELS_REQUIRED:
+        raise RuntimeError(
+            f"Only {successful_panels}/{NUM_PANELS} panels generated. "
+            f"Minimum required: {MIN_PANELS_REQUIRED}. Aborting."
+        )
 
     # Step 5: Compose final strip
     strip = compose_comic_strip(panels, today_display)
