@@ -7,6 +7,7 @@ and composes them into a daily strip.
 """
 
 import os
+import sys
 import json
 import time
 import feedparser
@@ -342,8 +343,14 @@ def main():
     FULLRES_DIR.mkdir(parents=True, exist_ok=True)
     TEMP_DIR.mkdir(exist_ok=True)
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    today_display = datetime.now().strftime("%B %d, %Y")
+    # Allow date override via command line: python ai_things_considered.py 2026-01-16
+    if len(sys.argv) > 1:
+        today = sys.argv[1]
+        today_display = datetime.strptime(today, "%Y-%m-%d").strftime("%B %d, %Y")
+        print(f"Using override date: {today}")
+    else:
+        today = datetime.now().strftime("%Y-%m-%d")
+        today_display = datetime.now().strftime("%B %d, %Y")
 
     print(f"\n{'='*60}")
     print(f"AI THINGS CONSIDERED - {today_display}")
