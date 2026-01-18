@@ -43,7 +43,19 @@ Every day, this system reads the latest stories from NPR's All Things Considered
 python execution/ai_things_considered.py
 ```
 
+To regenerate a specific date:
+```bash
+python execution/ai_things_considered.py 2026-01-16
+```
+
 Output goes to `./output/` by default. Set `OUTPUT_DIR` in `.env` to change this.
+
+## Reliability
+
+Image generation includes automatic retry logic:
+- 3 attempts per panel with exponential backoff
+- Minimum 4/6 panels required or the run aborts
+- Detailed error logging for failed attempts
 
 ## Output Files
 
